@@ -1,20 +1,8 @@
-def rotate_left(x, y, w):
-    return ((x << y) & ((1 << w) - 1)) | (x >> (w - y))
-
-
-def rotate_right(x, y, w):
-    return (x >> y) | ((x << (w - y)) & ((1 << w) - 1))
-
-
-def initial_permutation(A, B):
+def permutation(A, B):
     return B, A
 
 
-def final_permutation(A, B):
-    return B, A
-
-
-def simplified_rcx_key_schedule(K, w, r):
+def rcx_key_schedule(K, w, r):
     P_w = 0xB7E15163
     Q_w = 0x9E3779B9
 
@@ -40,8 +28,8 @@ def simplified_rcx_key_schedule(K, w, r):
     return S
 
 
-def simplified_rcx_encrypt_block(block, S, w, r):
-    A, B = initial_permutation(block[0], block[1])
+def rcx_encrypt_block(block, S, w, r):
+    A, B = permutation(block[0], block[1])
     A = (A + S[0]) % (1 << w)
     B = (B + S[1]) % (1 << w)
 
@@ -49,12 +37,11 @@ def simplified_rcx_encrypt_block(block, S, w, r):
         A = (A ^ B) + S[2 * i] % (1 << w)
         B = (B ^ A) + S[2 * i + 1] % (1 << w)
 
-    return final_permutation(A, B)
+    return permutation(A, B)
 
 
-def simplified_rcx_decrypt_block(block, S, w, r):
-    A, B = final_permutation(block[0], block[1])
-
+def rcx_decrypt_block(block, S, w, r):
+    A, B = permutation(block[0], block[1])
     for i in range(r, 0, -1):
         B = (B - S[2 * i + 1]) ^ A % (1 << w)
         A = (A - S[2 * i]) ^ B % (1 << w)
@@ -62,7 +49,7 @@ def simplified_rcx_decrypt_block(block, S, w, r):
     A = (A - S[0]) % (1 << w)
     B = (B - S[1]) % (1 << w)
 
-    return initial_permutation(A, B)
+    return permutation(A, B)
 
 
 def pad_string(s, block_size):
@@ -96,14 +83,14 @@ def blocks_to_string(blocks):
     return unpad_string(byte_array.decode('utf-8'))
 
 
-def simplified_rcx_encrypt_string(plaintext, S, w, r):
+def rcx_encrypt_string(plaintext, S, w, r):
     blocks = string_to_blocks(plaintext)
-    encrypted_blocks = [simplified_rcx_encrypt_block(block, S, w, r) for block in blocks]
+    encrypted_blocks = [rcx_encrypt_block(block, S, w, r) for block in blocks]
     return encrypted_blocks
 
 
-def simplified_rcx_decrypt_string(ciphertext, S, w, r):
-    decrypted_blocks = [simplified_rcx_decrypt_block(block, S, w, r) for block in ciphertext]
+def rcx_decrypt_string(ciphertext, S, w, r):
+    decrypted_blocks = [rcx_decrypt_block(block, S, w, r) for block in ciphertext]
     return blocks_to_string(decrypted_blocks)
 
 
@@ -111,12 +98,16 @@ if __name__ == "__main__":
     w = 32
     r = 12
     key = [0x91, 0x5F, 0x46, 0x19, 0xBE, 0x41, 0xB2, 0x51, 0x91, 0x5F, 0x46, 0x19, 0xBE, 0x41, 0xB2, 0x51]
-    plaintext = "RCX is here"
-
-    S = simplified_rcx_key_schedule(key, w, r)
-
-    ciphertext = simplified_rcx_encrypt_string(plaintext, S, w, r)
+    plaintext = "If cryptography is outlawed, bayl bhgynjf jvyy unir cevinpl"
+    binary_string = ''.join(format(ord(char), '08b') for char in plaintext)
+    S = rcx_key_schedule(key, w, r)
+    ciphertext = rcx_encrypt_string(binary_string, S, w, r)
     print(f"Ciphertext: {ciphertext}")
-
-    decrypted = simplified_rcx_decrypt_string(ciphertext, S, w, r)
-    print(f"Decrypted: {decrypted}")
+    decrypted = rcx_decrypt_string(ciphertext, S, w, r)
+    chars = []
+    for i in range(0, len(decrypted), 8):
+        byte = binary_string[i:i + 8]
+        char = chr(int(byte, 2))
+        chars.append(char)
+    chars = ''.join(chars)
+    print(f"Decrypted: {chars}")
